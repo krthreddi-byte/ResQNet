@@ -20,15 +20,15 @@ const registerUser = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    // Create user (with default fallback values for location to prevent validation errors)
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
       phone,
       role: role || 'citizen',
-      location,
-      addressText
+      location: location || { type: 'Point', coordinates: [78.4867, 17.3850] },
+      addressText: addressText || 'Hyderabad'
     });
 
     // Generate JWT token

@@ -2,10 +2,20 @@ import React, { useState, useEffect } from 'react';
 import API from './services/api';
 import { AlertTriangle, Shield, MapPin, Activity, Package, LogOut, CheckCircle } from 'lucide-react';
 
+const inputStyle = {
+  width: '100%',
+  padding: '10px',
+  borderRadius: '6px',
+  border: '1px solid #475569',
+  backgroundColor: '#0f172a',
+  color: '#fff',
+  boxSizing: 'border-box'
+};
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [isLogin, setIsLogin] = useState(true);
-  
+
   // Auth Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,44 +38,40 @@ function App() {
     }
   }, [token]);
 
-const handleBroadcastSOS = async (e) => {
-  if (e) e.preventDefault();
-  
-  try {
-    // 1. Storage nundi login token teeshukuntam
-    const token = localStorage.getItem('token');
+  // Auth Submit Handler (Login / Register)
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg('');
+    try {
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
+      const payload = isLogin
+        ? { email, password }
+        : { name, phone, email, password };
 
-    // 2. Fallback Location & Form Details payload
-    const sosPayload = {
-      emergencyType: emergencyType || 'Food & Water Supply',
-      description: description,
-      location: {
-        type: 'Point',
-        coordinates: [78.4867, 17.3850] // Default [Longitude, Latitude]
+      const res = await API.post(endpoint, payload);
+
+      if (res.data && res.data.token) {
+        const userToken = res.data.token;
+        localStorage.setItem('token', userToken);
+        setToken(userToken);
+        setMsg(isLogin ? 'Login successful! 🚀' : 'Registration successful! 🚀');
+      } else {
+        setMsg('Authentication completed, please login.');
       }
-    };
-
-    // 3. Backend API Call with Token
-    const res = await axios.post('http://localhost:5000/api/requests', sosPayload, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    if (res.data.success || res.status === 201 || res.status === 200) {
-      alert("SOS Broadcasted Successfully! 🚨");
-      // Form reset or state update logic ikkada untundhi
+    } catch (err) {
+      console.error("Auth Error:", err);
+      setMsg(err.response?.data?.message || 'Authentication failed! Please check credentials or backend connection.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("SOS Broadcast Error:", error);
-    alert("Failed to broadcast SOS");
-  }
-};
+  };
 
   const logout = () => {
     localStorage.removeItem('token');
     setToken('');
+    setEmergencies([]);
+    setResources([]);
   };
 
   const fetchEmergencies = async () => {
@@ -73,7 +79,7 @@ const handleBroadcastSOS = async (e) => {
       const res = await API.get('/emergencies');
       setEmergencies(res.data.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Emergencies Error:", err);
     }
   };
 
@@ -83,7 +89,7 @@ const handleBroadcastSOS = async (e) => {
       const res = await API.get('/resources/nearby?lng=78.4867&lat=17.385&maxDistance=10000');
       setResources(res.data.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Resources Error:", err);
     }
   };
 
@@ -100,6 +106,7 @@ const handleBroadcastSOS = async (e) => {
       setMsg('🚨 SOS Emergency Broadcast Sent!');
       fetchEmergencies();
     } catch (err) {
+      console.error("SOS Trigger Error:", err);
       setMsg('Failed to broadcast SOS');
     } finally {
       setLoading(false);
@@ -135,9 +142,9 @@ const handleBroadcastSOS = async (e) => {
             )}
             <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
-            
-            <button type="submit" style={{ backgroundColor: '#2563eb', color: '#fff', padding: '12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-              {isLogin ? 'Login' : 'Register'}
+
+            <button type="submit" disabled={loading} style={{ backgroundColor: '#2563eb', color: '#fff', padding: '12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
+              {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Register')}
             </button>
           </form>
           <p style={{ textAlign: 'center', marginTop: '15px', cursor: 'pointer', color: '#60a5fa' }} onClick={() => setIsLogin(!isLogin)}>
@@ -202,7 +209,7 @@ const handleBroadcastSOS = async (e) => {
                 {resources.length === 0 ? <p style={{ color: '#94a3b8' }}>No nearby resources found within 10km.</p> : (
                   resources.map((res) => (
                     <div key={res._id} style={{ background: '#0f172a', padding: '10px', borderRadius: '6px', marginBottom: '10px', borderLeft: '3px solid #10b981' }}>
-                      <strong style={{ color: '#10b981' }}>{res.resourceType.toUpperCase()}</strong>: {res.quantity} {res.unit}
+                      <strong style={{ color: '#10b981' }}>{res.resourceType?.toUpperCase()}</strong>: {res.quantity} {res.unit}
                       <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
                         Owner: {res.owner?.name || 'Volunteer'} ({res.owner?.phone || 'N/A'})
                       </div>
@@ -217,15 +224,5 @@ const handleBroadcastSOS = async (e) => {
     </div>
   );
 }
-
-const inputStyle = {
-  width: '100%',
-  padding: '10px',
-  borderRadius: '6px',
-  border: '1px solid #475569',
-  backgroundColor: '#0f172a',
-  color: '#fff',
-  boxSizing: 'border-box'
-};
 
 export default App;
