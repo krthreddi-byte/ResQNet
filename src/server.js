@@ -1,33 +1,65 @@
-const express = require('express');
-const cors = require('cors'); // Added CORS
-const connectDB = require('./config/db');
-require('dotenv').config();
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+
+// Import Routes
+import authRoutes from './routes/authRoutes.js';
+import emergencyRoutes from './routes/emergencyRoutes.js';
+import resourceRoutes from './routes/resourceRoutes.js';
+
+dotenv.config();
 
 const app = express();
-
-// Database connect chey
-connectDB();
-
-// Middleware
-app.use(cors()); // Allow requests from Frontend (localhost:5173 / 5174)
-app.use(express.json());
-
-// Test route
-app.get('/', (req, res) => {
-  res.send('ResQNet Backend is running...');
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']
+  }
 });
 
-// Routes mount cheyali
-const authRoutes = require('./routes/authRoutes');
+// Pass io object to req middleware
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+app.use(cors());
+app.use(express.json());
+
+// API Routes
 app.use('/api/auth', authRoutes);
-
-const emergencyRoutes = require('./routes/emergencyRoutes');
 app.use('/api/emergencies', emergencyRoutes);
-
-const resourceRoutes = require('./routes/resourceRoutes');
 app.use('/api/resources', resourceRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+// Connect MongoDB Memory Server
+const startServer = async () => {
+  try {
+    const mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await mongoose.connect(uri);
+    console.log(`MongoDB Memory Server Connected: 127.0.0.1`);
+
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Server startup error:', err);
+  }
+};
+
+startServer();
+
+// Socket.io connection logger
+io.on('connection', (socket) => {
+  console.log('⚡ Client connected via Socket.io:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
 });
