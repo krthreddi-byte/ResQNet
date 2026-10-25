@@ -1,18 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { createEmergency, getEmergencies, updateEmergencyStatus } from '../controllers/emergencyController.js';
+
 const router = express.Router();
-const {
-  createEmergency,
-  getEmergencies,
-  updateEmergencyStatus
-} = require('../controllers/emergencyController');
-const { protect } = require('../middleware/authMiddleware');
+router.post('/', createEmergency);
+router.get('/', getEmergencies);
+router.patch('/:id/status', updateEmergencyStatus);
 
-// Base emergency routes
-router.route('/')
-  .post(protect, createEmergency)
-  .get(protect, getEmergencies);
-
-// Volunteer status update route (Pending -> In Progress / Resolved)
-router.route('/:id/status').patch(protect, updateEmergencyStatus);
-
-module.exports = router;
+export default router;

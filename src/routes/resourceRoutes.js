@@ -1,16 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { getResources, createResource } from '../controllers/resourceController.js';
+
 const router = express.Router();
-const { 
-  addResource, 
-  getResources, 
-  getNearbyResources 
-} = require('../controllers/resourceController');
-const { protect } = require('../middleware/authMiddleware');
+router.get('/', getResources);
+router.post('/', createResource);
 
-router.route('/')
-  .post(protect, addResource)
-  .get(protect, getResources);
-
-router.route('/nearby').get(protect, getNearbyResources);
-
-module.exports = router;
+export default router;

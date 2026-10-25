@@ -1,28 +1,22 @@
- const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true },
-  phone: { type: String, required: true },
-  role: { 
-    type: String, 
-    enum: ['citizen', 'volunteer', 'resource_provider', 'admin'], 
-    default: 'citizen' 
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['victim', 'volunteer', 'admin'], default: 'victim' },
+    phone: { type: String },
   },
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], required: true }
-  },
-  addressText: { type: String },
-  isAvailable: { type: Boolean, default: true },
-  skillsOrResources: [{ type: String }],
-  isVerified: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  { timestamps: true }
+);
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-userSchema.index({ location: '2dsphere' });
-
-// IMPORTANT: Direct ga model compile chesi export cheyali
 const User = mongoose.model('User', userSchema);
-module.exports = User;
+export default User;
