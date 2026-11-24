@@ -1,7 +1,13 @@
 import express from 'express';
-import { getResources, createResource } from '../controllers/resourceController.js';
+import {
+  getResources,
+  getNearbyResources,
+  createResource
+} from '../controllers/resourceController.js';
 
 const router = express.Router();
+
+router.get('/nearby', getNearbyResources);
 router.get('/', getResources);
 router.post('/', createResource);
 
